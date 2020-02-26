@@ -14,10 +14,10 @@ This file outlines the analysis pipeline for the UKBB application in Knutson and
 
 GWAS summary statistics on 3,144 Imaging Derived Phenotypes (IDPs) using 9,707 participants have been publicly reported by Elliot et al. [1] (paper: https://www.nature.com/articles/s41586-018-0571-7, resource: http://big.stats.ox.ac.uk/about). We first perform univariate TWAS tests using the summary statistics of 1,578 of these IDPs which were deemed heritable using LDScore Regression (Supp. Table 2 in [1]). Linux commands for download of these GWAS can be found at https://www.dropbox.com/s/qhiftre33pi70xs/BIG_summary_stats_files.xls?dl=0. 
 
-For the sake of this example, we describe our analysis pipeline using 1 IDP, INSERT HERE. To download, use the command:
+For the sake of this example, we describe our analysis pipeline using a single IDP, namely #0119: T1_FIRST_left_hippocampus_volume. To download, use the command from the dropbox link above:
 
 ```
-insert wget command here
+wget 'https://www.dropbox.com/s/m7yhcx6h6pqmlgl/0019.txt.gz?dl=0' -O 0019.txt.gz
 ```
 
 ## Data Processing: LD clumping and thresholding
