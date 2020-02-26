@@ -2,11 +2,11 @@
 
 This file outlines the analysis pipeline for the UKBB application in Knutson and Pan (2020). The key steps in our analysis include:
 
-1. Downloading UKBB IDP GWAS summary statistics
-2. Clumping and Thresholding of UKBB GWAS 
-3. Acquiring and pre-processing IGAP Summary Statistics
+1. Downloading reference data, such as 1000G
+2. Downloading, Reformatting, & Clumping+Thresholding UKBB IDP GWAS summary statistics
+3. Acquiring IGAP Summary Statistics & extracting overlapping SNPs from UKBB GWAS  
 4. Obtain estimated LD matrices for Stage 1 variants
-5. 
+5. Perform TWAS/MV-TWAS 
 
 ## Data Acquisition
 
@@ -14,38 +14,52 @@ This file outlines the analysis pipeline for the UKBB application in Knutson and
 
 GWAS summary statistics on 3,144 Imaging Derived Phenotypes (IDPs) using 9,707 participants have been publicly reported by Elliot et al. [1] (paper: https://www.nature.com/articles/s41586-018-0571-7, resource: http://big.stats.ox.ac.uk/about). We first perform univariate TWAS tests using the summary statistics of 1,578 of these IDPs which were deemed heritable using LDScore Regression (Supp. Table 2 in [1]). Linux commands for download of these GWAS can be found at https://www.dropbox.com/s/qhiftre33pi70xs/BIG_summary_stats_files.xls?dl=0. 
 
-For the sake of this example, we describe our analysis pipeline using a single IDP, namely #0119: T1_FIRST_left_hippocampus_volume. To download, use the command from the dropbox link above:
+For the sake of this example, we describe our analysis pipeline using a single IDP, namely #0119: T1_FIRST_left_hippocampus_volume. To download, use the wget command from the dropbox link above:
 
 ```
 wget 'https://www.dropbox.com/s/m7yhcx6h6pqmlgl/0019.txt.gz?dl=0' -O 0019.txt.gz
+gunzip 0019.txt.gz
+```
+
+This file contains columns "MAF", "BETA", "SEBETA", and "PVAL", and must be merged with the SNP/SNP poisition information, downloadable at https://www.dropbox.com/s/6xcofhwbnyre0s5/positions.txt.gz?dl=0&file_subpath=%2Fpositions.txt. We merge these two files and alter some column names to prepare for LD clumping in plink (specifically RSID -> SNP, PVAL -> P, CHROM -> CHR). 
+
+```
+paste ./new.positions.txt ./0019.txt > ./IDP0019.txt
+sed -e '1s/RSID/SNP/' -e '1s/PVAL/P/' -e '1s/CHROM/CHR/' ./IDP0019.txt > ./IDP0019tmp.txt
+```
+
+**1000 Genomes Reference Panel**
+
+For LD clumping and estimation, we use the phase3 1000G reference panel of 503 subjects of European ancestry [3]. These data can be found at https://www.internationalgenome.org/data#download. Straightforward commands for downloading the EUR data in plink file format via R are given below (taken from http://psoerensen.github.io/qgg/articles/1000genome_tutorial.html)
+
+```
+download.file(url="https://data.broadinstitute.org/alkesgroup/LDSCORE/1000G_Phase3_plinkfiles.tgz",dest="./1000G_Phase3_plinkfiles.tgz")
+system("tar -xvzf 1000G_Phase3_plinkfiles.tgz")
 ```
 
 ## Data Processing: LD clumping and thresholding
 
-We perform LD clumping on each of the UKBB IDP summary statistics using the 1000G reference panel of 503 subjects of European ancestry [3]. These data can be found at https://www.internationalgenome.org/data#download (CHECK THIS HERE!).
-
-For ld clumping, we use a clumping radius of 1 Mb and R2 cutoff of 0.1. We extract clumped SNPs from the IDP GWAS. Example plink commands are given below.
+We use a clumping radius of 1 Mb and R2 cutoff of 0.1. We extract clumped SNPs from the IDP GWAS. Example plink commands are given below for chromosome 21. We perform LD clumping seperately for each chromosome on every IDP. 
 
 ```
-plink LD clumping command
+./plink --bfile ./1000G_EUR_Phase3_plink/1000G.EUR.QC.21 --clump ./IDP0019tmp.txt --chr 21 --clump-p1 1 --clump-p2 1 --clump-r2 0.10 --clump-kb 1000 --out ./IDP0019 
 ```
 
-We load the resulting clumped data in R and extract SNPs with p < 5x10^{-5}. 
+We then extract SNPs with p < 5x10^{-5}. 
 
 ```
 R code here
 ```
 
-As described in [2], the GWAS effect estimates for the remaining variants for each IDP will be used as weights TWAS/MV-TWAS model. 
-
 ## Data Processing: Merging with IGAP
 
-We obtain AD GWAS summary statistics from Phase 1 of The International Genomics of Alzheimer’s Project (IGAP) [4]. These data can be downloaded at http://web.pasteur-lille.fr/en/recherche/u744/igap/igap_download.php. We extract the SNPs from the clumped UKBB GWAS. In some cases, some of the IDP variants were missing from IGAP data. We exclude these from analysis. Going forward, we refer to the set of remaining SNPs for IDP INSERT NUMBER as the Stage 1 SNPs-set. 
+We obtain AD GWAS summary statistics from Phase 1 of The International Genomics of Alzheimer’s Project (IGAP) [4]. These data can be downloaded at http://web.pasteur-lille.fr/en/recherche/u744/igap/igap_download.php. We extract the SNPs from the clumped UKBB GWAS. In some cases, some of the IDP variants were missing from IGAP data. We exclude these from analysis. Going forward, we refer to the set of remaining SNPs for IDP 0119 as the Stage 1 SNPs-set. 
 
 ```
-code for loading in data and extracting SNPs
+code for merging SNPs
 ```
 
+As described in [2], the GWAS effect estimates for the remaining variants for each IDP will be used as weights TWAS/MV-TWAS model. 
 
 ## Estimating LD matrices from a reference panel
 
