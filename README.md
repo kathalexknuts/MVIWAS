@@ -45,7 +45,7 @@ We use a clumping radius of 1 Mb and R2 cutoff of 0.1. We extract clumped SNPs f
 ```
 system("awk -F"\t" 'NR==1{print;next}$1 == 21' ./IDP0019tmp.txt > ./IDP0019_chr21.txt")
 
-system("./plink --bfile ./1000G_EUR_Phase3_plink/1000G.EUR.QC.21 --clump ./IDP0019_chr21.txt --clump-p1 1 --clump-p2 1 --clump-r2 0.10 --clump-kb 1000 --out ./IDP0019_chr21")
+system("plink --bfile ./1000G_EUR_Phase3_plink/1000G.EUR.QC.21 --clump ./IDP0019_chr21.txt --clump-p1 1 --clump-p2 1 --clump-r2 0.10 --clump-kb 1000 --out ./IDP0019_chr21")
 
 ```
 
@@ -67,31 +67,34 @@ We obtain AD GWAS summary statistics from Phase 1 of The International Genomics 
 
 ```
 system("awk 'FNR==NR {a[$1]; next}; $3 in a' ./clumped_rs.txt ./IGAP_summary_statistics/IGAP_stage_1.txt > IGAP_overlap.txt")
-IGAP <- read.table("./IGAP_overlap.txt", header = F, col.names = c("CHR", "POS", "SNP", "REF", "ALT", "Beta.Y", "SE.Y", "P.Y"))
+IGAP <- read.table("./IGAP_overlap.txt", header = F, col.names = c("CHR", "POS", "SNP", "REF", "ALT", "BETA.Y", "SE.Y", "P.Y"))
 IDP_cpt <- IDP_cpt[IDP_cpt$SNP %in% IGAP$SNP,]
 
 IDP_IGAP <- merge(IGAP, IDP_cpt, by = c("SNP", "REF", "ALT", "CHR", "POS"))
 ```
 
-The resulting data frame IDP_IGAP contains summary statistics for IDP 0019 and AD (from IGAP) after clumping and thresholding of the UKBB IDP data. For this specific example (i.e. IDP 0019, chr 21), we have # SNPs remaining. 
+The resulting data frame IDP_IGAP contains summary statistics for IDP 0019 and AD (from IGAP) after clumping and thresholding of the UKBB IDP data. For this specific example (i.e. IDP 0019, chr 21), we have 2 SNPs remaining - rs4819284 and rs4819210. 
 
 We perform this process in parallel for each chromosome for IDP 0019 to yield a full set of genome-wide variants (specifically # for IDP 0019). 
 
 ## Estimating LD matrices from a reference panel
 
-We next estimate LD correlations for the Stage 1 SNP-set. This can be done in plink (given 1000G reference panel) or, for fewer than 600 variants, can be implemented using the ld_matrix function from the TwoSampleMR package in R. We have confirmed that these two approaches give the same resulting LD matrix.
+We next estimate LD correlations for the Stage 1 SNP-set in plink (given 1000G reference panel) or, for fewer than 600 variants, can be implemented using the ld_matrix function from the TwoSampleMR package in R. We have confirmed that these two approaches give the same resulting LD matrix (check this!!) .
 
 **plink implementation ( still written as if in R using system() )**
 ```
-write.table(IDP_IGAP, "./IDP_IGAP.txt", col.names = F, row.names = F, quote = F)
-FINISH THIS
+write.table(as.character(IDP_IGAP$SNP), "./IDP_IGAP_SNP.txt", col.names = F, row.names = F, quote = F)
+system("plink --bfile ./1000G_EUR_Phase3_plink/1000G.EUR.QC.21 --extract ./IDP_IGAP_SNP.txt --r2 square --write-snplist --out ./IDP0019_chr21")
+ld21 <- as.matrix(read.table("./IDP0019_chr21.ld", header = F)); 
+snpslist <- as.character((read.table("./IDP0019_chr21.snplist", header = FALSE))[,1])
+dimnames(ld21) <- list(snpslist, snpslist)
 ```
 
-**R package implementation**
+**R package implementation (check this!!!)**
 ```
 install.packages("devtools")
 devtools::install_github("MRCIEU/TwoSampleMR")
-ld21 <- na.omit(ld_matrix(IDP_IGAP$SNP, with_alleles = FALSE))
+ld21 <- na.omit(abs(ld_matrix(as.character(IDP_IGAP$SNP), with_alleles = FALSE))^2)
 ```
 
 As described in [2], we use a block diagonal LD matrix (22 blocks by chromosome) in TWAS/MV-TWAS. Given a list of the 22 LD matrices for IDP 0119, we use the bdiag function in R from the Matrix package. 
@@ -107,10 +110,31 @@ IDP_IGAP <- IDP_IGAP[IDP_IGAP$SNP %in% rownames(ZTZ),]
 
 ## Univariate TWAS with summary statistics
 
-We have now obtained all neccessary data for univariate TWAS of IDP 0119. 
+We have now obtained all neccessary data for univariate TWAS of IDP 0119. Before performing the following steps, be sure that the SNP order for the ld matrix is the same as the SNP order for the IDP_IGAP df. 
 
 ```
-univariate TWAS code here.
+library("dplyr")
+
+nR <- nrow(read.table("./IDP0019_chr21.nosex"))
+n <- 54162
+
+marg_betas <- IDP_IGAP$BETA.Y; names(marg_betas) <- as.character(IDP_IGAP$SNP)
+marg_var <- IDP_IGAP$SE.Y^2; names(marg_var) <- as.character(IDP_IGAP$SNP)
+W <- matrix(IDP_IGAP$BETA.X, ncol = 1)
+
+ZTY <- matrix(diag(ZTZ) * marg_betas, ncol = 1); rownames(ZTY) <- names(marg_betas)
+
+YTY_list <- list()
+for(SNP in names(marg_betas)){
+  YTY_list[[length(YTY_list) + 1]] <- (nR)*ZTZ[SNP, SNP]*marg_var[SNP] + marg_betas[SNP]*ZTY[SNP,]
+}
+
+YTY <- median((YTY_list %>% do.call("rbind", .))[,1])
+
+beta <- as.matrix(solve(t(W) %*% ZTZ %*% W) %*% t(W) %*% (ZTY), col = 1)
+sigmaJ <- (YTY - t(ZTY)%*%W%*%solve(t(W)%*%ZTZ%*%W)%*%t(W)%*%ZTY)/(n - ncol(W))
+se <- sqrt(diag(solve(t(W) %*% ZTZ %*% W) * c(sigmaJ)))
+p <- 2*pnorm(-abs(beta/se))
 ```
 
 The univariate TWAS results for each of these IDPs in given in the Supplementary Materials of [2]. 
