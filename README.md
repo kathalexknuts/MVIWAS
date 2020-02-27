@@ -31,11 +31,29 @@ system("sed -e '1s/RSID/SNP/' -e '1s/PVAL/P/' -e '1s/CHROM/CHR/' ./IDP0019.txt >
 
 **1000 Genomes Reference Panel**
 
-For LD clumping and estimation, we use the phase3 1000G reference panel of 503 subjects of European ancestry [3]. These data can be found at https://www.internationalgenome.org/data#download. Straightforward commands for downloading the EUR data in plink file format via R are given below (taken from http://psoerensen.github.io/qgg/articles/1000genome_tutorial.html)
+For LD clumping and estimation, we use the phase3 1000G reference panel [3]. Phased genotypes can be found in vcf file format via the hyperlink at https://www.internationalgenome.org/category/vcf/. We convert these data into plink file format (bed, bim, fam) and extract the 503 subjects of european ancestry, IDs which can be found at ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/integrated_call_samples_v3.20130502.ALL.panel. In the following document, we use the naming convention "1000G.EUR.#" for these files, where # is replaced with the given chromosome.  
+
+The following commands (written in R) can be used for direct downloading and processing these data (per chromosome) below. For simplicity, we only give example commands for a single chromosome (chr 21), but this should be repeated for all chromosomes for full data.
 
 ```
-download.file(url="https://data.broadinstitute.org/alkesgroup/LDSCORE/1000G_Phase3_plinkfiles.tgz",dest="./1000G_Phase3_plinkfiles.tgz")
-system("tar -xvzf 1000G_Phase3_plinkfiles.tgz")
+system("wget ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/ALL.chr21.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz")
+
+system("plink --vcf ALL.chr21.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz --out chr21")
+
+system("wget ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/integrated_call_samples_v3.20130502.ALL.panel")
+
+populations <- read.table("./integrated_call_samples_v3.20130502.ALL.panel", header = T)
+EUR <- as.character(populations[populations$super_pop == "EUR","sample"])
+write.table(cbind(EUR, EUR), "./EUR.txt", col.names = F, row.names = F, quote = F)
+
+system("plink --bfile ./chr21 --keep ./EUR.txt --make-bed --out 1000G.EUR.21")
+
+#remove duplicated variants
+system("plink --bfile 1000G.EUR.21 --write-snplist --out ./all_snps")
+
+system("cat all_snps.snplist | sort | uniq -d > duplicated_snps.snplist")
+
+system("plink --bfile 1000G.EUR.21 --exclude duplicated_snps.snplist --make-bed --out 1000G.EUR.21.DuplicatesRemoved")
 ```
 
 ## Data Processing: LD clumping and thresholding
@@ -43,10 +61,9 @@ system("tar -xvzf 1000G_Phase3_plinkfiles.tgz")
 We use a clumping radius of 1 Mb and R2 cutoff of 0.1. We extract clumped SNPs from the IDP GWAS. Example plink commands are given below for chromosome 21. We perform LD clumping in parallel for chromosome on every IDP. 
 
 ```
-system("awk -F"\t" 'NR==1{print;next}$1 == 21' ./IDP0019tmp.txt > ./IDP0019_chr21.txt")
+system("awk -F'\t' 'NR==1{print;next}$1 == 21' ./IDP0019tmp.txt > ./IDP0019_chr21.txt")
 
-system("plink --bfile ./1000G_EUR_Phase3_plink/1000G.EUR.QC.21 --clump ./IDP0019_chr21.txt --clump-p1 1 --clump-p2 1 --clump-r2 0.10 --clump-kb 1000 --out ./IDP0019_chr21")
-
+system("plink --bfile ./1000G.EUR.21.DuplicatesRemoved --clump ./IDP0019_chr21.txt --clump-p1 1 --clump-p2 1 --clump-r2 0.10 --clump-kb 1000 --out ./IDP0019_chr21")
 ```
 
 We then extract SNPs with p < 5x10^{-5}. 
@@ -79,21 +96,22 @@ We perform this process in parallel for each chromosome for IDP 0019 to yield a 
 
 ## Estimating LD matrices from a reference panel
 
-We next estimate LD correlations for the Stage 1 SNP-set in plink (given 1000G reference panel) or, for fewer than 600 variants, can be implemented using the ld_matrix function from the TwoSampleMR package in R. We have confirmed that these two approaches give the same resulting LD matrix (check this!!) .
+We next estimate LD correlations for the Stage 1 SNP-set using plink using the 1000G reference panel. For fewer than 600 variants, the LD matrix can be implemented using the ld_matrix function from the TwoSampleMR package in R. However, we note that ld estimation using TwoSample MR is based on only 502 EUR subjects so, while these 2 approaches yield *very* similar results, the former may be the more appropriate approach.
 
 **plink implementation ( still written as if in R using system() )**
 ```
 write.table(as.character(IDP_IGAP$SNP), "./IDP_IGAP_SNP.txt", col.names = F, row.names = F, quote = F)
-system("plink --bfile ./1000G_EUR_Phase3_plink/1000G.EUR.QC.21 --extract ./IDP_IGAP_SNP.txt --r2 square --write-snplist --out ./IDP0019_chr21")
+system("plink --bfile ./1000G.EUR.21.DuplicatesRemoved --extract ./IDP_IGAP_SNP.txt --r2 square --write-snplist --out ./IDP0019_chr21")
 ld21 <- as.matrix(read.table("./IDP0019_chr21.ld", header = F)); 
 snpslist <- as.character((read.table("./IDP0019_chr21.snplist", header = FALSE))[,1])
 dimnames(ld21) <- list(snpslist, snpslist)
 ```
 
-**R package implementation (check this!!!)**
+**R package implementation**
 ```
 install.packages("devtools")
 devtools::install_github("MRCIEU/TwoSampleMR")
+library("TwoSampleMR")
 ld21 <- na.omit(abs(ld_matrix(as.character(IDP_IGAP$SNP), with_alleles = FALSE))^2)
 ```
 
@@ -110,7 +128,7 @@ IDP_IGAP <- IDP_IGAP[IDP_IGAP$SNP %in% rownames(ZTZ),]
 
 ## Univariate TWAS with summary statistics
 
-We have now obtained all neccessary data for univariate TWAS of IDP 0119. Before performing the following steps, be sure that the SNP order for the ld matrix is the same as the SNP order for the IDP_IGAP df. 
+We have now obtained all neccessary data for univariate TWAS of IDP 0119. Before performing the following steps, be sure that the SNP order for the ld matrix is the same as the SNP order for the IDP_IGAP df. As previously noted, the total sample size for the AD GWAS is n= 54162 and the LD estimates are based on nR = 503 EUR subjects from 1000G. 
 
 ```
 library("dplyr")
@@ -141,7 +159,7 @@ The univariate TWAS results for each of these IDPs in given in the Supplementary
 
 ## Multivariate TWAS with summary statistics
 
-Following univariate testing of all heritable UKBB IDPs, we obtain the set of NUMBER candidate IDPs with univariate p-value < 0.1. We then perform a multivariate TWAS using these candidate IDPs. Example commands are given below. Here, W is a matrix of weights, where each IDP represents a column. The first command given below ensures that, for each IDP column, only variants in the given IDPs SNP-set have non-zero values from the corresponding GWAS effect estimates. All other cells should be set to zero.  
+Following univariate testing of all heritable UKBB IDPs, we obtain the set of candidate IDPs with univariate p-value < 0.1. We then perform a multivariate TWAS using these candidate IDPs. Example commands are given below. Here, W is a matrix of weights, where each IDP represents a column. The first command given below ensures that, for each IDP column, only variants in the given IDPs SNP-set have non-zero values from the corresponding GWAS effect estimates. All other cells should be set to zero.  
 
 ```
 Insert R code here.
