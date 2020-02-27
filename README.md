@@ -43,7 +43,7 @@ system("tar -xvzf 1000G_Phase3_plinkfiles.tgz")
 We use a clumping radius of 1 Mb and R2 cutoff of 0.1. We extract clumped SNPs from the IDP GWAS. Example plink commands are given below for chromosome 21. We perform LD clumping in parallel for chromosome on every IDP. 
 
 ```
-system("awk -F"\t" 'NR==1{print;next}$1 == 21' ~/Desktop/IDP0019tmp.txt > ~/Desktop/IDP0019_chr21.txt")
+system("awk -F"\t" 'NR==1{print;next}$1 == 21' ./IDP0019tmp.txt > ./IDP0019_chr21.txt")
 
 system("./plink --bfile ./1000G_EUR_Phase3_plink/1000G.EUR.QC.21 --clump ./IDP0019_chr21.txt --clump-p1 1 --clump-p2 1 --clump-r2 0.10 --clump-kb 1000 --out ./IDP0019_chr21")
 
