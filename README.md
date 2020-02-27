@@ -14,7 +14,7 @@ This file outlines the analysis pipeline for the UKBB application in Knutson and
 
 GWAS summary statistics on 3,144 Imaging Derived Phenotypes (IDPs) using 9,707 participants have been publicly reported by Elliot et al. [1] (paper: https://www.nature.com/articles/s41586-018-0571-7, resource: http://big.stats.ox.ac.uk/about). We first perform univariate TWAS tests using the summary statistics of 1,578 of these IDPs which were deemed heritable using LDScore Regression (Supp. Table 2 in [1]). Linux commands for download of these GWAS can be found at https://www.dropbox.com/s/qhiftre33pi70xs/BIG_summary_stats_files.xls?dl=0. 
 
-For the sake of this example, we describe our analysis pipeline using a single IDP, namely #0119: T1_FIRST_left_hippocampus_volume. To download, use the wget command from the dropbox link above:
+For the sake of this example, we describe our analysis pipeline using a single IDP, namely #0019: T1_FIRST_left_hippocampus_volume. To download, use the wget command from the dropbox link above:
 
 ```
 system("wget 'https://www.dropbox.com/s/m7yhcx6h6pqmlgl/0019.txt.gz?dl=0' -O 0019.txt.gz")
@@ -63,7 +63,7 @@ IDP_cpt <- read.table("./IDP0019_CPT.txt", header = FALSE, col.names = c("CHR", 
 
 ## Data Processing: Merging with IGAP
 
-We obtain AD GWAS summary statistics from Phase 1 of The International Genomics of Alzheimer’s Project (IGAP) [4]. These data can be downloaded at http://web.pasteur-lille.fr/en/recherche/u744/igap/igap_download.php. We extract the SNPs from the clumped UKBB GWAS. In some cases, some of the IDP variants were missing from IGAP data. We exclude these from analysis. Going forward, we refer to the set of remaining SNPs for IDP 0119 as the Stage 1 SNPs-set. 
+We obtain AD GWAS summary statistics from Phase 1 of The International Genomics of Alzheimer’s Project (IGAP) [4]. These data can be downloaded at http://web.pasteur-lille.fr/en/recherche/u744/igap/igap_download.php. We extract the SNPs from the clumped UKBB GWAS. In some cases, some of the IDP variants were missing from IGAP data. We exclude these from analysis. Going forward, we refer to the set of remaining SNPs for IDP 0019 as the Stage 1 SNPs-set. 
 
 ```
 system("awk 'FNR==NR {a[$1]; next}; $3 in a' ./clumped_rs.txt ./IGAP_summary_statistics/IGAP_stage_1.txt > IGAP_overlap.txt")
@@ -73,9 +73,9 @@ IDP_cpt <- IDP_cpt[IDP_cpt$SNP %in% IGAP$SNP,]
 IDP_IGAP <- merge(IGAP, IDP_cpt, by = c("SNP", "REF", "ALT", "CHR", "POS"))
 ```
 
-The resulting data frame IDP_IGAP contains summary statistics for IDP 0119 and AD (from IGAP) after clumping and thresholding of the UKBB IDP data. For this specific example (i.e. IDP 0119, chr 21), we have # SNPs remaining. 
+The resulting data frame IDP_IGAP contains summary statistics for IDP 0019 and AD (from IGAP) after clumping and thresholding of the UKBB IDP data. For this specific example (i.e. IDP 0019, chr 21), we have # SNPs remaining. 
 
-We perform this process in parallel for each chromosome for IDP 0119 to yield a full set of genome-wide variants (specifically # for IDP 0119). 
+We perform this process in parallel for each chromosome for IDP 0019 to yield a full set of genome-wide variants (specifically # for IDP 0019). 
 
 ## Estimating LD matrices from a reference panel
 
