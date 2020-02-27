@@ -24,7 +24,7 @@ system("gunzip 0019.txt.gz")
 This file contains columns "MAF", "BETA", "SEBETA", and "PVAL", and must be merged with the SNP/SNP poisition information, downloadable at https://www.dropbox.com/s/6xcofhwbnyre0s5/positions.txt.gz?dl=0&file_subpath=%2Fpositions.txt. We merge these two files and alter some column names to prepare for LD clumping in plink (specifically RSID -> SNP, PVAL -> P, CHROM -> CHR). The PVAL (or renamed P) column gives the -log10 p-value, so transform these back as 10^(-P). 
 
 ```
-system("cat ./0019.txt | awk -F"\t" 'NR==1{print;next}; {$4=10**(-1*$4); print}' > ./0019tmp.txt")
+system("cat ./0019.txt | awk -F'\t' 'NR==1{print;next}; {$4=10**(-1*$4); print}' > ./0019tmp.txt")
 system("paste ./new.positions.txt ./0019tmp.txt > ./IDP0019.txt")
 system("sed -e '1s/RSID/SNP/' -e '1s/PVAL/P/' -e '1s/CHROM/CHR/' ./IDP0019.txt > ./IDP0019tmp.txt")
 ```
@@ -138,7 +138,7 @@ n <- 54162
 
 marg_betas <- IDP_IGAP$BETA.Y; names(marg_betas) <- as.character(IDP_IGAP$SNP)
 marg_var <- IDP_IGAP$SE.Y^2; names(marg_var) <- as.character(IDP_IGAP$SNP)
-W <- matrix(IDP_IGAP$BETA.X, ncol = 1)
+W <- matrix(IDP_IGAP$BETA.X, ncol = 1); rownames(W) <- as.character(IDP_IGAP$SNP)
 
 ZTY <- matrix(diag(ZTZ) * marg_betas, ncol = 1); rownames(ZTY) <- names(marg_betas)
 
@@ -153,16 +153,20 @@ beta <- as.matrix(solve(t(W) %*% ZTZ %*% W) %*% t(W) %*% (ZTY), col = 1)
 sigmaJ <- (YTY - t(ZTY)%*%W%*%solve(t(W)%*%ZTZ%*%W)%*%t(W)%*%ZTY)/(n - ncol(W))
 se <- sqrt(diag(solve(t(W) %*% ZTZ %*% W) * c(sigmaJ)))
 p <- 2*pnorm(-abs(beta/se))
+
+res_0019 <- list(data.frame(IDP = "0019", Beta = beta, SE = se, P = p), W, ZTZ, marg_betas, marg_var)
+save(res_0019, file = "./0019_chr21only.RData")
 ```
 
 The univariate TWAS results for each of these IDPs in given in the Supplementary Materials of [2]. 
 
 ## Multivariate TWAS with summary statistics
 
-Following univariate testing of all heritable UKBB IDPs, we obtain the set of candidate IDPs with univariate p-value < 0.1. We then perform a multivariate TWAS using these candidate IDPs. Example commands are given below. Here, W is a matrix of weights, where each IDP represents a column. The first command given below ensures that, for each IDP column, only variants in the given IDPs SNP-set have non-zero values from the corresponding GWAS effect estimates. All other cells should be set to zero.  
+Following univariate testing of all heritable UKBB IDPs, we obtain the set of candidate IDPs with univariate p-value < INSERT HERE. We then perform a multivariate TWAS using these candidate IDPs. Example commands are given below for k = 2 IDPs. Here, W is a p x k matrix of weights, where each vector of IDP weights is represented by a column. Ensure that ,for each IDP column, only variants in the given IDPs SNP-set have non-zero values from the corresponding GWAS effect estimates. All other cells should be set to zero. 
+
 
 ```
-Insert R code here.
+Code here.
 ```
 
 Results for this model are given in [2] and directly compared to the univariate TWAS results. We discovered NUMBER new IDPs with putative causal effects on AD using the MV-TWAS model over it's univariate analogue.  
