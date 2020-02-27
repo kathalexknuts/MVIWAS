@@ -63,7 +63,7 @@ IDP_cpt <- read.table("./IDP0019_CPT.txt", header = FALSE, col.names = c("CHR", 
 
 ## Data Processing: Merging with IGAP
 
-We obtain AD GWAS summary statistics from Phase 1 of The International Genomics of Alzheimer’s Project (IGAP) [4]. These data can be downloaded at http://web.pasteur-lille.fr/en/recherche/u744/igap/igap_download.php. We extract the SNPs from the clumped UKBB GWAS. In some cases, some of the IDP variants were missing from IGAP data. We exclude these from analysis. Going forward, we refer to the set of remaining SNPs for IDP 0019 as the Stage 1 SNPs-set. 
+We obtain AD GWAS summary statistics from Phase 1 of The International Genomics of Alzheimer’s Project (IGAP) [4]. These data can be downloaded at http://web.pasteur-lille.fr/en/recherche/u744/igap/igap_download.php. Phase 1 includes 17,008 Alzheimer's disease cases and 37,154 controls (total n = 54162). We extract the SNPs from the clumped UKBB GWAS. In some cases, some of the IDP variants were missing from IGAP data. We exclude these from analysis. Going forward, we refer to the set of remaining SNPs for IDP 0019 as the Stage 1 SNPs-set. 
 
 ```
 system("awk 'FNR==NR {a[$1]; next}; $3 in a' ./clumped_rs.txt ./IGAP_summary_statistics/IGAP_stage_1.txt > IGAP_overlap.txt")
