@@ -1,4 +1,4 @@
-# MVTWAS Analysis Pipeline
+# MV-TWAS Analysis Pipeline
 
 This file outlines the analysis pipeline for the UKBB application in Knutson and Pan (2020). The key steps in our analysis include:
 
