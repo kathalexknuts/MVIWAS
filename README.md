@@ -144,7 +144,7 @@ ZTY <- matrix(diag(ZTZ) * marg_betas, ncol = 1); rownames(ZTY) <- names(marg_bet
 
 YTY_list <- list()
 for(SNP in names(marg_betas)){
-  YTY_list[[length(YTY_list) + 1]] <- (nR)*ZTZ[SNP, SNP]*marg_var[SNP] + marg_betas[SNP]*ZTY[SNP,]
+  YTY_list[[length(YTY_list) + 1]] <- (n)*ZTZ[SNP, SNP]*marg_var[SNP] + marg_betas[SNP]*ZTY[SNP,]
 }
 
 YTY <- median((YTY_list %>% do.call("rbind", .))[,1])
