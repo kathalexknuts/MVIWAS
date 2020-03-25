@@ -162,14 +162,9 @@ The univariate TWAS results for each of these IDPs in given in the Supplementary
 
 ## Multivariate TWAS with summary statistics
 
-Following univariate testing of all heritable UKBB IDPs, we obtain the set of candidate IDPs with univariate p-value < INSERT HERE. We then perform a multivariate TWAS using these candidate IDPs. Example commands are given below for k = 2 IDPs. Here, W is a p x k matrix of weights, where each vector of IDP weights is represented by a column. Ensure that ,for each IDP column, only variants in the given IDPs SNP-set have non-zero values from the corresponding GWAS effect estimates. All other cells should be set to zero. 
+Following univariate testing of all heritable UKBB IDPs, we obtain a set of candidate IDPs with univariate p-value < 0.05. We then perform multivariate TWAS using these candidate IDPs seperately for each brain imaging modality group (functional, diffusion, structural). These modality groups can be inferred using the IDP names listed at https://www.dropbox.com/s/qhiftre33pi70xs/BIG_summary_stats_files.xls?dl=0, along with the table giving counts for each modality type in the supplementary material of Elliot et al. Implementation of MV-TWAS follows almost directly with the univariate example given above. Here, however, W is a p x k matrix of weights, where each vector of IDP weights is represented by a column. Ensure that ,for each IDP column, only variants in the given IDPs SNP-set have non-zero values from the corresponding GWAS effect estimates. All other cells should be set to zero. 
 
-
-```
-Code here.
-```
-
-Results for this model are given in [2] and directly compared to the univariate TWAS results. We discovered NUMBER new IDPs with putative causal effects on AD using the MV-TWAS model over it's univariate analogue.  
+Results for this model are given in [2] and directly compared to the univariate TWAS results.
 
 ## References
 
