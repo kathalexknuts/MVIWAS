@@ -1,4 +1,4 @@
-# MV-TWAS Analysis Pipeline
+# MV-IWAS Analysis Pipeline
 
 This file outlines the analysis pipeline for the UKBB application in Knutson and Pan (2020). The key steps in our analysis include:
 
@@ -6,13 +6,13 @@ This file outlines the analysis pipeline for the UKBB application in Knutson and
 2. Downloading, Reformatting, & Clumping+Thresholding UKBB IDP GWAS summary statistics
 3. Acquiring IGAP Summary Statistics & extracting overlapping SNPs from UKBB GWAS  
 4. Obtain estimated LD matrices for Stage 1 variants
-5. Perform TWAS/MV-TWAS 
+5. Perform IWAS/MV-IWAS 
 
 ## Data Acquisition
 
 **UKBB IDP GWAS Summary Statistics**
 
-GWAS summary statistics on 3,144 Imaging Derived Phenotypes (IDPs) using 9,707 participants have been publicly reported by Elliot et al. [1] (paper: https://www.nature.com/articles/s41586-018-0571-7, resource: http://big.stats.ox.ac.uk/about). We first perform univariate TWAS tests using the summary statistics of 1,578 of these IDPs which were deemed heritable using LDScore Regression (Supp. Table 2 in [1]). Linux commands for download of these GWAS can be found at https://www.dropbox.com/s/qhiftre33pi70xs/BIG_summary_stats_files.xls?dl=0. 
+GWAS summary statistics on 3,144 Imaging Derived Phenotypes (IDPs) using 9,707 participants have been publicly reported by Elliot et al. [1] (paper: https://www.nature.com/articles/s41586-018-0571-7, resource: http://big.stats.ox.ac.uk/about). We first perform univariate IWAS tests using the summary statistics of 1,578 of these IDPs which were deemed heritable using LDScore Regression (Supp. Table 2 in [1]). Linux commands for download of these GWAS can be found at https://www.dropbox.com/s/qhiftre33pi70xs/BIG_summary_stats_files.xls?dl=0. 
 
 For the sake of this example, we describe our analysis pipeline using a single IDP, namely #0019: T1_FIRST_left_hippocampus_volume. To download, use the wget command from the dropbox link above:
 
@@ -115,7 +115,7 @@ library("TwoSampleMR")
 ld21 <- na.omit(abs(ld_matrix(as.character(IDP_IGAP$SNP), with_alleles = FALSE))^2)
 ```
 
-As described in [2], we use a block diagonal LD matrix (22 blocks by chromosome) in TWAS/MV-TWAS. Given a list of the 22 LD matrices for IDP 0119, we use the bdiag function in R from the Matrix package. 
+As described in [2], we use a block diagonal LD matrix (22 blocks by chromosome) in IWAS/MV-IWAS. Given a list of the 22 LD matrices for IDP 0119, we use the bdiag function in R from the Matrix package. 
 
 ```
 library("Matrix")
@@ -126,9 +126,9 @@ dimnames(ZTZ) <- list(unlist(lapply(ld_list, rownames)), unlist(lapply(ld_list, 
 IDP_IGAP <- IDP_IGAP[IDP_IGAP$SNP %in% rownames(ZTZ),]
 ```
 
-## Univariate TWAS with summary statistics
+## Univariate IWAS with summary statistics
 
-We have now obtained all neccessary data for univariate TWAS of IDP 0119. Before performing the following steps, be sure that the SNP order for the ld matrix is the same as the SNP order for the IDP_IGAP df. As previously noted, the total sample size for the AD GWAS is n= 54162 and the LD estimates are based on nR = 503 EUR subjects from 1000G. 
+We have now obtained all neccessary data for univariate IWAS of IDP 0119. Before performing the following steps, be sure that the SNP order for the ld matrix is the same as the SNP order for the IDP_IGAP df. As previously noted, the total sample size for the AD GWAS is n= 54162 and the LD estimates are based on nR = 503 EUR subjects from 1000G. 
 
 ```
 library("dplyr")
@@ -158,13 +158,13 @@ res_0019 <- list(data.frame(IDP = "0019", Beta = beta, SE = se, P = p), W, ZTZ, 
 save(res_0019, file = "./0019_chr21only.RData")
 ```
 
-The univariate TWAS results for each of these IDPs in given in the Supplementary Materials of [2]. 
+The univariate IWAS results for each of these IDPs in given in the Supplementary Materials of [2]. 
 
-## Multivariate TWAS with summary statistics
+## Multivariate IWAS with summary statistics
 
-Following univariate testing of all heritable UKBB IDPs, we obtain a set of candidate IDPs with univariate p-value < 0.05. We then perform multivariate TWAS using these candidate IDPs seperately for each brain imaging modality group (functional, diffusion, structural). These modality groups can be inferred using the IDP names listed at https://www.dropbox.com/s/qhiftre33pi70xs/BIG_summary_stats_files.xls?dl=0, along with the table giving counts for each modality type in the supplementary material of Elliot et al. Implementation of MV-TWAS almost directly parallels the univariate example given above. Here, however, W is a p x k matrix of weights, where each vector of IDP weights is represented by a column. Ensure that for each column of W, only variants in the associated IDP's SNP-set have non-zero values from the corresponding GWAS effect estimates. All other cells should be set to zero. 
+Following univariate testing of all heritable UKBB IDPs, we obtain a set of candidate IDPs with univariate p-value < 0.05. We then perform multivariate IWAS using these candidate IDPs seperately for each brain imaging modality group (functional, diffusion, structural). These modality groups can be inferred using the IDP names listed at https://www.dropbox.com/s/qhiftre33pi70xs/BIG_summary_stats_files.xls?dl=0, along with the table giving counts for each modality type in the supplementary material of Elliot et al. Implementation of MV-IWAS almost directly parallels the univariate example given above. Here, however, W is a p x k matrix of weights, where each vector of IDP weights is represented by a column. Ensure that for each column of W, only variants in the associated IDP's SNP-set have non-zero values from the corresponding GWAS effect estimates. All other cells should be set to zero. 
 
-Results for this model are given in [2] and directly compared to the univariate TWAS results.
+Results for this model are given in [2] and directly compared to the univariate IWAS results.
 
 ## References
 
