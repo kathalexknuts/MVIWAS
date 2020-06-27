@@ -1,8 +1,8 @@
 # MV-IWAS Analysis Pipeline
 
-This file outlines the analysis pipeline for the UKBB application in Knutson and Pan (2020). The key steps in our analysis include:
+This file outlines the analysis pipeline for the UKBB application in "Implicating Causal Brain Imaging Endophenotypes in Alzheimer’s Disease using Multivariable IWAS and GWAS Summary Data" (Knutson, Deng and Pan, 2020). The key steps in our analysis include:
 
-1. Downloading reference data, such as 1000G
+1. Downloading 1000G reference data
 2. Downloading, Reformatting, & Clumping+Thresholding UKBB IDP GWAS summary statistics
 3. Acquiring IGAP Summary Statistics & extracting overlapping SNPs from UKBB GWAS  
 4. Obtain estimated LD matrices for Stage 1 variants
@@ -80,13 +80,17 @@ IDP_cpt <- read.table("./IDP0019_CPT.txt", header = FALSE, col.names = c("CHR", 
 
 ## Data Processing: Merging with IGAP
 
-We obtain AD GWAS summary statistics from Phase 1 of The International Genomics of Alzheimer’s Project (IGAP) [4]. These data can be downloaded at http://web.pasteur-lille.fr/en/recherche/u744/igap/igap_download.php. Phase 1 includes 17,008 Alzheimer's disease cases and 37,154 controls (total n = 54162). We extract the SNPs from the clumped UKBB GWAS. In some cases, some of the IDP variants were missing from IGAP data. We exclude these from analysis. Going forward, we refer to the set of remaining SNPs for IDP 0019 as the Stage 1 SNPs-set. 
+We obtain AD GWAS summary statistics from Phase 1 of The International Genomics of Alzheimer’s Project (IGAP) [4]. These data can be downloaded at http://web.pasteur-lille.fr/en/recherche/u744/igap/igap_download.php. Phase 1 includes 17,008 Alzheimer's disease cases and 37,154 controls (total n = 54162). We first linearize all odds ratios using the approach described in [1]. We then extract the SNPs from the clumped UKBB GWAS. In some cases, some of the IDP variants were missing from IGAP data. We exclude these from analysis. Going forward, we refer to the set of remaining SNPs for IDP 0019 as the Stage 1 SNPs-set. 
 
 ```
 system("awk 'FNR==NR {a[$1]; next}; $3 in a' ./clumped_rs.txt ./IGAP_summary_statistics/IGAP_stage_1.txt > IGAP_overlap.txt")
 IGAP <- read.table("./IGAP_overlap.txt", header = F, col.names = c("CHR", "POS", "SNP", "REF", "ALT", "BETA.Y", "SE.Y", "P.Y"))
-IDP_cpt <- IDP_cpt[IDP_cpt$SNP %in% IGAP$SNP,]
+exp_b0 <- 37154/17008
+fac <- exp_b0/(1 + exp_b0)^2
+IGAP$BETA.Y <- IGAP$BETA.Y*fac
+IGAP$SE.Y <- IGAP$SE.Y*fac
 
+IDP_cpt <- IDP_cpt[IDP_cpt$SNP %in% IGAP$SNP,]
 IDP_IGAP <- merge(IGAP, IDP_cpt, by = c("SNP", "REF", "ALT", "CHR", "POS"))
 ```
 
@@ -170,7 +174,7 @@ Results for this model are given in [2] and directly compared to the univariate 
 
 1. Elliott, L., et al. (2018). Genome-wide association studies of brain imaging phenotypes in UK Biobank. Nature, 562(7726), 210-216.
 
-2. Knutson, K., Pan, W. (TBD) 
+2. Knutson, K., Deng, Y. and Pan, W. (2020). Implicating Causal Brain Imaging Endophenotypes in Alzheimer’s Disease using Multivariable IWAS and GWAS Summary Data. TBD. 
 
 3. “A map of human genome variation from population-scale sequencing,” Nature, vol. 467, no. 7319, p. 1061, 2010.
 
