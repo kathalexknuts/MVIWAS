@@ -40,9 +40,9 @@ mv_iwas_summ <- function(betaZY, se_betaZY, betaZX, se_betaZX, corr_mat, n, trai
     cat("se_betaZX cannot contain NA values.", "\n")
   }else if(class(corr_mat) != "matrix"){
     cat("Correlation Matrix must be a matrix", "\n")
-  }else if(class(betaZY) != "matrix" & ncol(betaZY) == 1){
+  }else if((class(betaZY) != "matrix" && ncol(betaZY) == 1)){
     cat("betaZY must be a matrix with only 1 column", "\n")
-  }else if(class(se_betaZY) != "matrix" & ncol(se_betaZY) == 1){
+  }else if((class(se_betaZY) != "matrix" && ncol(se_betaZY) == 1)){
     cat("se_betaZY must be a matrix with only 1 column", "\n")
   }else if(class(betaZX) != "matrix"){
     cat("betaZX must be a matrix", "\n")
