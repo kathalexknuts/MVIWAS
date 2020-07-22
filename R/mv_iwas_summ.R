@@ -10,6 +10,7 @@
 #' @param trait_type Either "Continuous" or "Binary", for continous or binary disease traits
 #' @param n_case The number of cases used in the disease GWAS sample. Required for trait_type = "Binary", default for Continuous trait is NULL
 #' @param n_control The number of controls used in the disease GWAS sample. Required for trait_type = "Binary", default for Continuous trait is NULL
+#' @import dplyr
 #' @export
 #' @examples
 #' mv_iwas_summ()
