@@ -8,6 +8,15 @@ This file outlines the analysis pipeline for the UKBB application in "Implicatin
 4. Obtain estimated LD matrices for Stage 1 variants
 5. Perform IWAS/MV-IWAS 
 
+## Install Package
+
+```
+devtools::install_github("hadley/devtools")
+require(devtools)
+install_github("kathalexknuts/MVIWAS")
+require(MVIWAS)
+```
+
 ## Data Acquisition
 
 **UKBB IDP GWAS Summary Statistics**
@@ -21,7 +30,7 @@ system("wget 'https://www.dropbox.com/s/m7yhcx6h6pqmlgl/0019.txt.gz?dl=0' -O 001
 system("gunzip 0019.txt.gz")
 ```
 
-This file contains columns "MAF", "BETA", "SEBETA", and "PVAL", and must be merged with the SNP/SNP poisition information, downloadable at https://www.dropbox.com/s/6xcofhwbnyre0s5/positions.txt.gz?dl=0&file_subpath=%2Fpositions.txt. We merge these two files and alter some column names to prepare for LD clumping in plink (specifically RSID -> SNP, PVAL -> P, CHROM -> CHR). The PVAL (or renamed P) column gives the -log10 p-value, so transform these back as 10^(-P). 
+This file contains columns "MAF", "BETA", "SEBETA", and "PVAL", and must be merged with the SNP/SNP poisition information, downloadable at https://www.dropbox.com/s/6xcofhwbnyre0s5/positions.txt.gz?dl=0&file_subpath=%2Fpositions.txt. This file will be called new.positions.txt. We merge these two files and alter some column names to prepare for LD clumping in plink (specifically RSID -> SNP, PVAL -> P, CHROM -> CHR). The PVAL (or renamed P) column gives the -log10 p-value, so transform these back as 10^(-P). 
 
 ```
 system("cat ./0019.txt | awk -F'\t' 'NR==1{print;next}; {$4=10**(-1*$4); print}' > ./0019tmp.txt")
@@ -85,11 +94,6 @@ We obtain AD GWAS summary statistics from Phase 1 of The International Genomics 
 ```
 system("awk 'FNR==NR {a[$1]; next}; $3 in a' ./clumped_rs.txt ./IGAP_summary_statistics/IGAP_stage_1.txt > IGAP_overlap.txt")
 IGAP <- read.table("./IGAP_overlap.txt", header = F, col.names = c("CHR", "POS", "SNP", "REF", "ALT", "BETA.Y", "SE.Y", "P.Y"))
-exp_b0 <- 37154/17008
-fac <- exp_b0/(1 + exp_b0)^2
-IGAP$BETA.Y <- IGAP$BETA.Y*fac
-IGAP$SE.Y <- IGAP$SE.Y*fac
-
 IDP_cpt <- IDP_cpt[IDP_cpt$SNP %in% IGAP$SNP,]
 IDP_IGAP <- merge(IGAP, IDP_cpt, by = c("SNP", "REF", "ALT", "CHR", "POS"))
 ```
@@ -113,7 +117,6 @@ dimnames(ld21) <- list(snpslist, snpslist)
 
 **R package implementation**
 ```
-install.packages("devtools")
 devtools::install_github("MRCIEU/TwoSampleMR")
 library("TwoSampleMR")
 ld21 <- na.omit(abs(ld_matrix(as.character(IDP_IGAP$SNP), with_alleles = FALSE))^2)
@@ -135,38 +138,34 @@ IDP_IGAP <- IDP_IGAP[IDP_IGAP$SNP %in% rownames(ZTZ),]
 We have now obtained all neccessary data for univariate IWAS of IDP 0119. Before performing the following steps, be sure that the SNP order for the ld matrix is the same as the SNP order for the IDP_IGAP df. As previously noted, the total sample size for the AD GWAS is n= 54162 and the LD estimates are based on nR = 503 EUR subjects from 1000G. 
 
 ```
-library("dplyr")
-
-nR <- nrow(read.table("./IDP0019_chr21.nosex"))
 n <- 54162
+n_case <- 17008
+n_control <- 37154
+betaZY <- matrix(IDP_IGAP$BETA.Y, ncol = 1)
+se_betaZY <- matrix(IDP_IGAP$SE.Y, ncol = 1)
+betaZX <- matrix(IDP_IGAP$BETA.X, ncol = 1)
+se_betaZX <- matrix(IDP_IGAP$SEBETA.X, ncol = 1)
+corr_mat <- ld21
+trait_type <- "Binary"
 
-marg_betas <- IDP_IGAP$BETA.Y; names(marg_betas) <- as.character(IDP_IGAP$SNP)
-marg_var <- IDP_IGAP$SE.Y^2; names(marg_var) <- as.character(IDP_IGAP$SNP)
-W <- matrix(IDP_IGAP$BETA.X, ncol = 1); rownames(W) <- as.character(IDP_IGAP$SNP)
+res_0019 <- mv_iwas_summ(
+  betaZY,
+  se_betaZY,
+  betaZX,
+  se_betaZX,
+  corr_mat,
+  n,
+  trait_type,
+  n_case,
+  n_control
+)
 
-ZTY <- matrix(diag(ZTZ) * marg_betas, ncol = 1); rownames(ZTY) <- names(marg_betas)
-
-YTY_list <- list()
-for(SNP in names(marg_betas)){
-  YTY_list[[length(YTY_list) + 1]] <- (n)*ZTZ[SNP, SNP]*marg_var[SNP] + marg_betas[SNP]*ZTY[SNP,]
-}
-
-YTY <- median((YTY_list %>% do.call("rbind", .))[,1])
-
-beta <- as.matrix(solve(t(W) %*% ZTZ %*% W) %*% t(W) %*% (ZTY), col = 1)
-sigmaJ <- (YTY - t(ZTY)%*%W%*%solve(t(W)%*%ZTZ%*%W)%*%t(W)%*%ZTY)/(n - ncol(W))
-se <- sqrt(diag(solve(t(W) %*% ZTZ %*% W) * c(sigmaJ)))
-p <- 2*pnorm(-abs(beta/se))
-
-res_0019 <- list(data.frame(IDP = "0019", Beta = beta, SE = se, P = p), W, ZTZ, marg_betas, marg_var)
 save(res_0019, file = "./0019_chr21only.RData")
 ```
 
-The univariate IWAS results for each of these IDPs in given in the Supplementary Materials of [2]. 
-
 ## Multivariate IWAS with summary statistics
 
-Following univariate testing of all heritable UKBB IDPs, we obtain a set of candidate IDPs with univariate p-value < 0.05. We then perform multivariate IWAS using these candidate IDPs seperately for each brain imaging modality group (functional, diffusion, structural). These modality groups can be inferred using the IDP names listed at https://www.dropbox.com/s/qhiftre33pi70xs/BIG_summary_stats_files.xls?dl=0, along with the table giving counts for each modality type in the supplementary material of Elliot et al. Implementation of MV-IWAS almost directly parallels the univariate example given above. Here, however, W is a p x k matrix of weights, where each vector of IDP weights is represented by a column. Ensure that for each column of W, only variants in the associated IDP's SNP-set have non-zero values from the corresponding GWAS effect estimates. All other cells should be set to zero. 
+Following univariate testing of all heritable UKBB IDPs, we obtain a set of candidate IDPs with univariate p-value < 0.05. We then perform multivariate IWAS using these candidate IDPs seperately for each brain imaging modality group (functional, diffusion, structural). These modality groups can be inferred using the IDP names listed at https://www.dropbox.com/s/qhiftre33pi70xs/BIG_summary_stats_files.xls?dl=0, along with the table giving counts for each modality type in the supplementary material of Elliot et al. Implementation of MV-IWAS almost directly parallels the univariate example given above. Here, however, betaZX is a p x k matrix of weights, where each vector of IDP weights is represented by a column. Ensure that for each column of betaZX, only variants in the associated IDP's SNP-set have non-zero values from the corresponding GWAS effect estimates. All other cells should be set to zero. 
 
 Results for this model are given in [2] and directly compared to the univariate IWAS results.
 
