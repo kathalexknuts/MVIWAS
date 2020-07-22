@@ -70,6 +70,7 @@ mv_iwas_summ <- function(betaZY, se_betaZY, betaZX, se_betaZX, corr_mat, n, trai
     for(SNP in 1:nrow(corr_mat)){
       YTY_list[[length(YTY_list) + 1]] <- (n)*corr_mat[SNP, SNP]*(se_betaZY^2)[SNP, 1] + betaZY[SNP,1]*ZTY[SNP,]
     }
+
     YTY <- median((do.call("rbind", YTY_list))[,1])
 
     beta <- matrix(solve(t(betaZX) %*% corr_mat %*% betaZX) %*% t(betaZX) %*% (ZTY), ncol = 1)
