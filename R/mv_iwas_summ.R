@@ -18,7 +18,7 @@
 mv_iwas_summ <- function(betaZY, se_betaZY, betaZX, se_betaZX, corr_mat, n, trait_type, n_case = NULL, n_control = NULL){
 
 
-  cat("Have you made sure that all betaZY, se_betaZY, betaZX and se_betaZX are the same order by SNP ID?", "\n")
+  cat("Have you made sure that all betaZY, se_betaZY, betaZX and se_betaZX are the same order by SNP ID ?", "\n")
 
   if(sum(c(missing(betaZY), missing(betaZX), missing(se_betaZY), missing(se_betaZX), missing(corr_mat), missing(n), missing(trait_type))) > 0){
     cat("At least one of the arguments betaZY, se_betaZY, betaZX, se_betaZX, corr_mat, n, or trait_type is missing \n")
