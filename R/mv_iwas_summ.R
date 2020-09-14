@@ -15,13 +15,13 @@
 #' @examples
 #' mv_iwas_summ()
 
-mv_iwas_summ <- function(betaZY, se_betaZY, betaZX, se_betaZX, corr_mat, n, trait_type, n_case = NULL, n_control = NULL){
-
-
-  cat("Have you made sure that all betaZY, se_betaZY, betaZX and se_betaZX are the same order by SNP ID ?", "\n")
-
-  if(sum(c(missing(betaZY), missing(betaZX), missing(se_betaZY), missing(se_betaZX), missing(corr_mat), missing(n), missing(trait_type))) > 0){
-    cat("At least one of the arguments betaZY, se_betaZY, betaZX, se_betaZX, corr_mat, n, or trait_type is missing \n")
+mv_iwas_summ <- function(betaZY, se_betaZY, betaZX, corr_mat, n, trait_type, n_case = NULL, n_control = NULL){
+  
+  
+  cat("Have you made sure that all betaZY, se_betaZY, and betaZX are the same order by SNP ID ?", "\n")
+  
+  if(sum(c(missing(betaZY), missing(betaZX), missing(se_betaZY), missing(corr_mat), missing(n), missing(trait_type))) > 0){
+    cat("At least one of the arguments betaZY, se_betaZY, betaZX, corr_mat, n, or trait_type is missing \n")
   }else if(sum(is.na(corr_mat)) != 0){
     cat("Correlation Matrix cannot contain NA values.", "\n")
   }else if(!(trait_type %in% c("Continuous", "Binary"))){
@@ -36,8 +36,6 @@ mv_iwas_summ <- function(betaZY, se_betaZY, betaZX, se_betaZX, corr_mat, n, trai
     cat("betaZX cannot contain NA values.", "\n")
   }else if(sum(is.na(se_betaZY)) != 0){
     cat("se_betaZY cannot contain NA values.", "\n")
-  }else if(sum(is.na(se_betaZX)) != 0){
-    cat("se_betaZX cannot contain NA values.", "\n")
   }else if(class(corr_mat) != "matrix"){
     cat("Correlation Matrix must be a matrix", "\n")
   }else if(class(betaZY) != "matrix"){
@@ -50,39 +48,37 @@ mv_iwas_summ <- function(betaZY, se_betaZY, betaZX, se_betaZX, corr_mat, n, trai
     cat("se_betaZY must be a matrix with only 1 column", "\n")
   }else if(class(betaZX) != "matrix"){
     cat("betaZX must be a matrix", "\n")
-  }else if(class(se_betaZX) != "matrix"){
-    cat("se_betaZX must be a matrix", "\n")
-  }else if(var(c(nrow(betaZX), nrow(betaZY), nrow(se_betaZX), nrow(se_betaZY), nrow(corr_mat), ncol(corr_mat))) != 0){
-    cat("the number of rows in betaZX, betaZY, se_betaZX, se_betaZY, and corr_mat (rows and columns) must be equal.", "\n")
+  }else if(var(c(nrow(betaZX), nrow(betaZY), nrow(se_betaZY), nrow(corr_mat), ncol(corr_mat))) != 0){
+    cat("the number of rows in betaZX, betaZY, se_betaZY, and corr_mat (rows and columns) must be equal.", "\n")
   }else{
-
+    
     if(trait_type == "Binary"){
       cat("Converting OR to Linear Coefficients \n")
       exp_b0 <- n_control/n_case
       fac <- exp_b0/(1 + exp_b0)^2
-      betaZX <- betaZX*fac
-      se_betaZX <- se_betaZX*fac
+      betaZY <- betaZY*fac
+      se_betaZY <- se_betaZY*fac
     }
-    nsnps <- nrow(betaZX)
-
+    nsnps <- nrow(betaZY)
+    
     ZTY <- matrix(diag(corr_mat) * betaZY, ncol = 1);
     YTY_list <- list()
     for(SNP in 1:nrow(corr_mat)){
       YTY_list[[length(YTY_list) + 1]] <- (n)*corr_mat[SNP, SNP]*(se_betaZY^2)[SNP, 1] + betaZY[SNP,1]*ZTY[SNP,]
     }
-
+    
     YTY <- median((do.call("rbind", YTY_list))[,1])
-
+    
     beta <- matrix(solve(t(betaZX) %*% corr_mat %*% betaZX) %*% t(betaZX) %*% (ZTY), ncol = 1)
     sigma <- as.numeric(unlist((YTY - t(ZTY)%*%betaZX%*%solve(t(betaZX)%*%corr_mat%*%betaZX)%*%t(betaZX)%*%ZTY)/(n - ncol(betaZX))))
     se <- matrix(sqrt(diag(solve(t(betaZX) %*% corr_mat %*% betaZX) * c(sigma))), ncol = 1)
     Z <- matrix(beta/se, ncol = 1)
     p <- matrix(2*pnorm(-abs(Z), 0, 1), ncol = 1)
     result <- data.frame(MODEL = "MV-IWAS", TERM = paste0("Phenotype", 1:ncol(betaZX)), BETA = beta, SE = se, Z = Z, P = p, NSNP = nsnps, DiseaseType = trait_type)
-
+    
     cat("Finished with MV-IWAS \n");
     cat("Now Running MV-IWAS-Egger \n");
-
+    
     betaZX_egger <- cbind(1, betaZX)
     beta_egger <- matrix(solve(t(betaZX_egger) %*% corr_mat %*% betaZX_egger) %*% t(betaZX_egger) %*% (ZTY), ncol = 1)
     sigma_egger <- as.numeric(unlist((YTY - t(ZTY)%*%betaZX_egger%*%solve(t(betaZX_egger)%*%corr_mat%*%betaZX_egger)%*%t(betaZX_egger)%*%ZTY)/(n - ncol(betaZX_egger))))
@@ -90,11 +86,12 @@ mv_iwas_summ <- function(betaZY, se_betaZY, betaZX, se_betaZX, corr_mat, n, trai
     Z_egger <- matrix(beta_egger/se_egger, ncol = 1)
     p_egger <- matrix(2*pnorm(-abs(Z_egger), 0, 1), ncol = 1)
     result_egger <- data.frame(MODEL = "MV-IWAS-Egger", TERM = c("mu", paste0("Phenotype", 1:ncol(betaZX))), BETA = beta_egger, SE = se_egger, Z = Z_egger, P = p_egger, NSNP = nsnps, DiseaseType = trait_type)
-
+    
     cat("Done! \n")
-
+    
     return(list(result, result_egger))
-
-
+    
+    
   }
 }
+
