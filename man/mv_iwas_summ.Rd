@@ -8,7 +8,6 @@ mv_iwas_summ(
   betaZY,
   se_betaZY,
   betaZX,
-  se_betaZX,
   corr_mat,
   n,
   trait_type,
@@ -23,8 +22,6 @@ mv_iwas_summ(
 
 \item{betaZX}{A matrix with estimated SNP effects on each exposure phenotype of interest, taken from GWAS summary data. There should be a separate column for each exposure phenotype of interest and a separate row for each SNP. The order of SNPs in rows should match across betaZY, se_betaZY, betaZX, se_betaZX, and corr_mat. For SNPs which are not to be included in Stage 1 for a given exposure phenotype, set the corresponding SNP row to 0 for that phenotype's column. Do not use NA. If the number of columns is equal to 1, this test will be equivalent to the so-called UV-IWAS test.}
 
-\item{se_betaZX}{A matrix with estimated SE of SNP effects on each exposure phenotype of interest, taken from GWAS summary data. There should be a separate column for each exposure phenotype of interest and a separate row for each SNP. The order of SNPs in rows should match across betaZY, se_betaZY, betaZX, se_betaZX, and corr_mat. For SNPs which are not to be included in Stage 1 for a given exposure phenotype, set the corresponding SNP row to 0 for that phenotype's column. Do not use NA.}
-
 \item{corr_mat}{The covariance or correlation matrix of SNPs, estimated from a reference panel of similar ancestry to the GWAS summary data. The order of SNPs in the columns and rows should match each other and the row orders of betaZY, se_betaZY, betaZX, se_betaZX.}
 
 \item{n}{The sample size used to estimate the disease GWAS summary data}
@@ -34,6 +31,8 @@ mv_iwas_summ(
 \item{n_case}{The number of cases used in the disease GWAS sample. Required for trait_type = "Binary", default for Continuous trait is NULL}
 
 \item{n_control}{The number of controls used in the disease GWAS sample. Required for trait_type = "Binary", default for Continuous trait is NULL}
+
+\item{se_betaZX}{A matrix with estimated SE of SNP effects on each exposure phenotype of interest, taken from GWAS summary data. There should be a separate column for each exposure phenotype of interest and a separate row for each SNP. The order of SNPs in rows should match across betaZY, se_betaZY, betaZX, se_betaZX, and corr_mat. For SNPs which are not to be included in Stage 1 for a given exposure phenotype, set the corresponding SNP row to 0 for that phenotype's column. Do not use NA.}
 }
 \description{
 This function produces causal estimates for phenotype-disease associations using MV-IWAS and MV-IWAS-Egger using GWAS summary statistics for a disease and exposure phenotypes (Knutson, Deng, and Pan, 2020)
