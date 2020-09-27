@@ -173,7 +173,7 @@ Results for this model are given in [2] and directly compared to the univariate 
 
 1. Elliott, L., et al. (2018). Genome-wide association studies of brain imaging phenotypes in UK Biobank. Nature, 562(7726), 210-216.
 
-2. Knutson, K., Deng, Y. and Pan, W. (2020). Implicating Causal Brain Imaging Endophenotypes in Alzheimer’s Disease using Multivariable IWAS and GWAS Summary Data. TBD. 
+2. Knutson, Katherine A., Deng, Yangqing, & Pan, Wei. (2020). Implicating causal brain imaging endophenotypes in Alzheimer’s disease using multivariable IWAS and GWAS summary data. NeuroImage, 223, 117347.
 
 3. “A map of human genome variation from population-scale sequencing,” Nature, vol. 467, no. 7319, p. 1061, 2010.
 
