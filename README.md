@@ -152,7 +152,6 @@ res_0019 <- mv_iwas_summ(
   betaZY,
   se_betaZY,
   betaZX,
-  se_betaZX,
   corr_mat,
   n,
   trait_type,
